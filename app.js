@@ -660,9 +660,3 @@ app.post("/api/people", (req, res) => {
 app.get("*", (req, res) => {
   res.status(404).json({ success: false, message: "Resource does not exist!" });
 });
-
-// return res.status(400).json({
-//   success: false,
-//   message:
-//     "",
-// });
