@@ -11,6 +11,30 @@ const getPersonById = async (id) => {
   }
 };
 
+const deletePersonById = async (id) => {
+  try {
+    const axios_data = await axios.delete(`/api/people/${id}`);
+
+    return axios_data.data.message;
+  } catch (error) {
+    return error.message;
+  }
+};
+
+const updatePerson = async (id, data) => {
+  try {
+    const axios_data = await axios({
+      method: "put",
+      url: `/api/people/${id}`,
+      data: data,
+    });
+
+    return axios_data.data.message;
+  } catch (error) {
+    return error.message;
+  }
+};
+
 const getPeople = async (search = "") => {
   const resultContainer = document.querySelector("#peopleContainer");
   try {
@@ -50,7 +74,7 @@ const getPeople = async (search = "") => {
                             </div>
                         </p>
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#personFormModal" data-bs-id="${pers.id}" data-bs-action="Update" >Update</button>
-                        <button class="btn btn-danger">Delete</button>
+                        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-bs-id="${pers.id}">Delete</button>
                     </div>
                 </div>
             </div>
@@ -79,6 +103,9 @@ getPeople();
 
 const personModal = document.querySelector("#personFormModal");
 personModal.addEventListener("show.bs.modal", (event) => {
+  const notification = document.querySelector("#notification");
+  const notificationBody = document.querySelector("#notification-body");
+
   // Button that triggered the modal
   const button = event.relatedTarget;
 
@@ -88,8 +115,10 @@ personModal.addEventListener("show.bs.modal", (event) => {
 
   const label = personModal.querySelector("#personFormModalLabel");
   const btnSubmit = personModal.querySelector("#modalBtnSubmit");
+  const idInputGroup = personModal.querySelector("#idInputGroup");
 
   if (action === "Update") {
+    idInputGroup.classList.remove("visually-hidden");
     (async function () {
       label.innerHTML = "Update";
       btnSubmit.innerHTML = "Update";
@@ -116,11 +145,89 @@ personModal.addEventListener("show.bs.modal", (event) => {
 
       const inputClientCountry = personModal.querySelector("#clientCountry");
       inputClientCountry.value = person.country;
+
+      const inputFile = personModal.querySelector("#formFile");
+
+      btnSubmit.addEventListener("click", () => {
+        const data = inputFile.value
+          ? {
+              clientName: inputClientName.value,
+              email: inputClientEmail.value,
+              project: inputClientProject.value,
+              birthdate: inputClientBirthdate.value,
+              country: inputClientCountry.value,
+              image: `/img/${inputFile.value
+                .replaceAll("//", "/")
+                .replaceAll("\\", "/")
+                .split("/")
+                .pop()}`,
+            }
+          : {
+              clientName: inputClientName.value,
+              email: inputClientEmail.value,
+              project: inputClientProject.value,
+              birthdate: inputClientBirthdate.value,
+              country: inputClientCountry.value,
+            };
+
+        (async () => {
+          const updateConfirm = await updatePerson(clientID, data);
+
+          notificationBody.innerHTML = updateConfirm;
+          notification.classList.add("show");
+
+          setTimeout(() => {
+            notification.classList.remove("show");
+            notificationBody.innerHTML = "";
+          }, 2000);
+
+          getPeople();
+        })();
+      });
     })();
   }
 
   if (action === "Create") {
     label.innerHTML = "Add a new Person";
     btnSubmit.innerHTML = "Add";
+    idInputGroup.classList.add("visually-hidden");
   }
+});
+
+const deleteModal = document.querySelector("#deleteModal");
+
+deleteModal.addEventListener("show.bs.modal", (event) => {
+  // Button that triggered the modal
+  const button = event.relatedTarget;
+
+  const deleteModalBody = deleteModal.querySelector("#deleteModalBody");
+
+  const btnDelete = deleteModal.querySelector("#btnDelete");
+
+  const notification = document.querySelector("#notification");
+  const notificationBody = document.querySelector("#notification-body");
+
+  (async () => {
+    // Extract info from data-bs-* attributes
+    const clientID = Number(button.getAttribute("data-bs-id"));
+
+    const person = await getPersonById(clientID);
+
+    deleteModalBody.innerHTML = `Are you sure you want to permanently delete ${person.clientName} ?`;
+
+    btnDelete.addEventListener("click", () => {
+      (async () => {
+        const deleteConfirm = await deletePersonById(clientID);
+        notificationBody.innerHTML = deleteConfirm;
+        notification.classList.add("show");
+
+        setTimeout(() => {
+          notification.classList.remove("show");
+          notificationBody.innerHTML = "";
+        }, 2000);
+
+        getPeople();
+      })();
+    });
+  })();
 });

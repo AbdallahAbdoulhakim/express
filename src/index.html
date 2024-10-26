@@ -89,11 +89,19 @@
       </div>
     </nav>
 
+    
+
     <div class="container mt-5 text-center">
+
+      <div id="notification" class="mt-5 alert alert-warning alert-dismissible fade" role="alert">
+        <div id="notification-body"></div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+
       <div id="peopleContainer" class="row d-flex justify-content-center"></div>
     </div>
 
-    // modal
+
 
     <div class="modal fade" id="personFormModal" tabindex="-1" aria-labelledby="personFormModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
@@ -104,7 +112,7 @@
           </div>
           <div class="modal-body">
             <form id="personForm">
-              <div class="mb-3">
+              <div id="idInputGroup" class="mb-3">
                 <label for="clientID" class="col-form-label">Client ID:</label>
                 <input type="text" id="clientID" name="clientID" class="form-control" readonly>
               </div>
@@ -386,11 +394,31 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button id="modalBtnSubmit" type="submit" class="btn btn-primary">Update</button>
+            <button id="modalBtnSubmit" type="submit" class="btn btn-primary" data-bs-dismiss="modal">Update</button>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Delete Modal -->
+  <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="deleteModalLabel">Confirm Delete</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div id="deleteModalBody" class="modal-body">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button id="btnDelete" type="button" class="btn btn-danger" data-bs-dismiss="modal">Yes, delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
 
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"

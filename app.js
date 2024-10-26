@@ -541,6 +541,91 @@ const validateImage = async (image) => {
   }
 };
 
+const validateRequest = async (method = "put", person) => {
+  let err = [];
+  let incon = [];
+
+  const { clientName, email, project, birthdate, country, image } = person;
+
+  if (
+    method === "post" &&
+    (!clientName || !project || !birthdate || !country || !image || !email)
+  ) {
+    err.push({
+      error: "Please provide all information for the person to be created!",
+      loc: 0,
+    });
+  }
+
+  if (
+    method === "put" &&
+    !clientName &&
+    !project &&
+    !birthdate &&
+    !country &&
+    !image &&
+    !email
+  ) {
+    err.push({
+      error:
+        "Please provide one of the information of the person to be updated!",
+      loc: 0,
+    });
+  }
+
+  if (email && !validateEmail(email)) {
+    err.push({ error: "Incorrect email format!", loc: 2 });
+  }
+
+  if (clientName && !validateName(customTrim(clientName))) {
+    err.push({ error: "Incorrect client name!", loc: 1 });
+  }
+
+  if (method === "post" && email && !checkUnicity(email, "email", people)) {
+    incon.push({
+      inconsitency: "A person with the provided email already exist!",
+      loc: 2,
+    });
+  }
+
+  if (project && !validateProject(capitalize(customTrim(project)))) {
+    err.push({ error: "Incorrect project Name!", loc: 3 });
+  }
+
+  if (birthdate && !validateBirthDate(birthdate).valid) {
+    err.push({ error: "Incorrect date format!", loc: 4 });
+  }
+
+  if (
+    birthdate &&
+    validateBirthDate(birthdate).valid &&
+    !validateAge(validateBirthDate(birthdate).date)
+  ) {
+    err.push({
+      error:
+        "The provided birthdate corresponds to a person under 18 years old!",
+      loc: 4,
+    });
+  }
+
+  if (country && !validateCountry(country)) {
+    err.push({ error: "Incorrect country!", loc: 5 });
+  }
+
+  if (image) {
+    const validImage = await validateImage(image);
+
+    if (!validImage) {
+      err.push({ error: "Image does not exist!", loc: 6 });
+    }
+  }
+
+  return {
+    err: err,
+    incon: incon,
+  };
+};
+
 app.use(express.json());
 app.use(morgan("combined", { stream: logStream }));
 app.use(express.static("./src"));
@@ -576,69 +661,42 @@ app.get("/api/people/:personId", (req, res) => {
   const person = people.find((pers) => pers.id === Number(personId));
 
   if (!person) {
-    return res
-      .status(404)
-      .json({ success: false, message: "Person Does Not Exist" });
+    return res.status(404).json({
+      success: false,
+      message: "Resource Does Not Exist!",
+      errors: { error: "Person Does Not Exist!", loc: 0 },
+    });
   }
 
-  res.status(200).json({ success: true, data: person });
+  res.status(200).json({
+    success: true,
+    message: "Person successfully retrieved!",
+    data: person,
+  });
 });
 
 app.post("/api/people", (req, res) => {
   (async () => {
     const body = req.body;
 
-    let err = "";
-    let incon = "";
+    const validRequest = await validateRequest("post", body);
 
     const { clientName, email, project, birthdate, country, image } = body;
 
-    if (!clientName || !project || !birthdate || !country || !image || !email) {
-      err =
-        "Bad request! Please provide all information for the person to be created!";
+    if (validRequest.err.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Bad request!",
+        errors: validRequest.err,
+      });
     }
 
-    if (email && !validateEmail(email)) {
-      err = "Bad request! Incorrect email format!";
-    }
-
-    if (clientName && !validateName(customTrim(clientName))) {
-      err = "Bad request! Incorrect client name!";
-    }
-
-    if (email && !checkUnicity(email, "email", people)) {
-      incon = "Conflict! A person with the provided email already exist!";
-    }
-
-    if (project && !validateProject(capitalize(customTrim(project)))) {
-      err = "Bad request! Incorrect project Name";
-    }
-
-    if (birthdate && !validateBirthDate(birthdate).valid) {
-      err = "Bad request! Incorrect date format";
-    }
-
-    if (birthdate && !validateAge(validateBirthDate(birthdate).date)) {
-      err =
-        "Bad request! The provided birthdate corresponds to a person under 18 years old!";
-    }
-
-    if (country && !validateCountry(country)) {
-      err = "Bad request! Incorrect country";
-    }
-
-    const validImage = await validateImage(image);
-
-    if (image && !validImage) {
-      err = "Bad request! Image does not exist";
-    }
-
-    if (err) {
-      return res.status(400).json({ success: false, message: err });
-    }
-
-    if (incon) {
-      return res.status(409).json({ success: false, message: incon });
+    if (validRequest.incon.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Conflict!",
+        inconistencies: validRequest.incon,
+      });
     }
 
     const person = {
@@ -653,8 +711,111 @@ app.post("/api/people", (req, res) => {
 
     people.push(person);
 
-    res.status(201).json({ success: true, data: person });
+    res.status(201).json({
+      success: true,
+      message: `${person.clientName} successfully created!`,
+      data: person,
+    });
   })();
+});
+
+app.put("/api/people/:personId", (req, res) => {
+  const { personId } = req.params;
+
+  const person = people.find((pers) => pers.id === Number(personId));
+
+  if (!person) {
+    return res.status(404).json({
+      success: false,
+      message: "Resource Does Not Exist!",
+      errors: { error: "Person Does Not Exist!", loc: 0 },
+    });
+  }
+
+  (async () => {
+    const body = req.body;
+
+    const validRequest = await validateRequest("put", body);
+
+    if (validRequest.err.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Bad request!",
+        errors: validRequest.err,
+      });
+    }
+
+    if (validRequest.incon.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Conflict!",
+        inconistencies: validRequest.incon,
+      });
+    }
+
+    const { clientName, email, project, birthdate, country, image } = body;
+
+    let modifiedPerson = person;
+
+    if (clientName) {
+      modifiedPerson = { ...modifiedPerson, clientName: clientName };
+    }
+
+    if (email) {
+      modifiedPerson = { ...modifiedPerson, email: email };
+    }
+
+    if (project) {
+      modifiedPerson = { ...modifiedPerson, project: project };
+    }
+
+    if (birthdate) {
+      modifiedPerson = { ...modifiedPerson, birthdate: birthdate };
+    }
+
+    if (country) {
+      modifiedPerson = { ...modifiedPerson, country: country };
+    }
+
+    if (image) {
+      modifiedPerson = { ...modifiedPerson, image: image };
+    }
+
+    const indexPerson = people.findIndex(
+      (pers) => pers.id === Number(personId)
+    );
+
+    people.splice(indexPerson, 1, modifiedPerson);
+
+    res.status(200).json({
+      success: true,
+      message: `${modifiedPerson.clientName} successfully updated!`,
+      data: modifiedPerson,
+    });
+  })();
+});
+
+app.delete("/api/people/:personId", (req, res) => {
+  const { personId } = req.params;
+
+  const person = people.find((pers) => pers.id === Number(personId));
+
+  if (!person) {
+    return res.status(404).json({
+      success: false,
+      message: "Resource Does Not Exist!",
+      errors: { error: "Person Does Not Exist!", loc: 0 },
+    });
+  }
+
+  const indexPerson = people.findIndex((pers) => pers.id === Number(personId));
+
+  people.splice(indexPerson, 1);
+
+  res.status(200).json({
+    success: true,
+    message: `${person.clientName} successfully deleted!`,
+  });
 });
 
 app.get("*", (req, res) => {
